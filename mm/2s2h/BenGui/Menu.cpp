@@ -563,29 +563,24 @@ void Menu::DrawElement() {
     ImVec2 pos = window->DC.CursorPos;
     float centerX = pos.x + windowWidth / 2 - (style.ItemSpacing.x * (menuEntries.size() + 1));
     std::vector<ImVec2> headerSizes;
-    float headerWidth = style.ItemSpacing.x;
-    bool headerSearch = !CVarGetInteger("gSettings.Menu.SidebarSearch", 0);
-    if (headerSearch) {
-        headerWidth += 200.0f + style.ItemSpacing.x + style.FramePadding.x;
-    }
-    for (auto& label : menuOrder) {
-        ImVec2 size = ImGui::CalcTextSize(label.c_str());
+#ifdef __ANDROID__
+    float headerWidth = 600.0f + style.ItemSpacing.x;
+#else
+    float headerWidth = 200.0f + style.ItemSpacing.x;
+#endif
+    for (int i = 0; i < sectionCount; i++) {
+        ImVec2 size = ImGui::CalcTextSize(menuEntries.at(i).label.c_str());
         headerSizes.push_back(size);
         headerWidth += size.x + style.FramePadding.x * 2;
         if (label == headerIndex) {
             headerWidth += style.ItemSpacing.x;
         }
     }
-    // Full screen menu with widths below 1280, heights below 800.
-    // 5% of screen width/height padding on both sides above those resolutions.
-    // Menu width will never exceed a 16:9 aspect ratio.
-    ImVec2 menuSize = { windowWidth, windowHeight };
-    if (windowWidth > 1280) {
-        menuSize.x = std::fminf(windowWidth * 0.9f, (windowHeight * 1.77f));
-    }
-    if (windowHeight > 800) {
-        menuSize.y = windowHeight * 0.9f;
-    }
+#ifdef __ANDROID__
+    ImVec2 menuSize = {windowWidth,windowHeight};
+#else
+    ImVec2 menuSize = {std::fminf(1280, windowWidth), std::fminf(800, windowHeight) };
+#endif
     pos += window->WorkRect.GetSize() / 2 - menuSize / 2;
     ImGui::SetNextWindowPos(pos);
     ImGui::BeginChild("Menu Block", menuSize,
@@ -670,7 +665,11 @@ void Menu::DrawElement() {
         menuSearchText = menuSearch.InputBuf;
         menuSearchText.erase(std::remove(menuSearchText.begin(), menuSearchText.end(), ' '), menuSearchText.end());
         if (menuSearchText.length() < 1) {
+#ifdef __ANDROID__
+            ImGui::SameLine(headerWidth - 600.0f + style.ItemSpacing.x);
+#else
             ImGui::SameLine(headerWidth - 200.0f + style.ItemSpacing.x);
+#endif
             ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 0.4f), "Search...");
         }
         ImGui::PopStyleColor();
@@ -682,9 +681,9 @@ void Menu::DrawElement() {
     options2.size = UIWidgets::Sizes::Inline;
     options2.tooltip = "Reset"
 #ifdef __APPLE__
-                       " (Command-R)"
-#elif !defined(__SWITCH__) && !defined(__WIIU__)
-                       " (Ctrl+R)"
+                                                     " (Command-R)"
+#elif !defined(__SWITCH__) && !defined(__WIIU__) && !defined(__ANDROID__)
+                                                     " (Ctrl+R)"
 #else
                        ""
 #endif
@@ -715,7 +714,11 @@ void Menu::DrawElement() {
     float sectionHeight = menuSize.y - headerHeight - 4 - style.ItemSpacing.y * 2;
     float columnHeight = sectionHeight - style.ItemSpacing.y * 4;
     ImGui::SetNextWindowPos(pos + style.ItemSpacing * 2);
+#ifdef __ANDROID__
+    float sidebarWidth = 600 - style.ItemSpacing.x;
+#else
     float sidebarWidth = 200 - style.ItemSpacing.x;
+#endif
 
     const char* sidebarCvar = menuEntries.at(headerIndex).sidebarCvar;
 
@@ -766,6 +769,9 @@ void Menu::DrawElement() {
     if (windowWidth < 800) {
         columns = 1;
     }
+#ifdef __ANDROID__
+    columns=1;
+#endif
     float columnWidth = (sectionWidth - style.ItemSpacing.x * columns) / columns;
     bool useColumns = columns > 1;
     if (!useColumns || (headerSearch && menuSearchText.length() > 0)) {
